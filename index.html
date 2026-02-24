@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Sistema de Turnos - Casino Atlantic</title>
+    <style>
+      body {
+        font-family: Arial;
+        background: #1a1a2e;
+        color: white;
+        padding: 20px;
+      }
+      h1 {
+        color: #e94560;
+      }
+      h2 {
+        color: #0f3460;
+        background: #e94560;
+        padding: 8px;
+        border-radius: 4px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 30px;
+      }
+      th {
+        background: #e94560;
+        padding: 10px;
+        text-align: left;
+      }
+      td {
+        padding: 8px;
+        border-bottom: 1px solid #333;
+      }
+      tr:hover {
+        background: #16213e;
+      }
+      .activo {
+        color: #00ff88;
+        font-weight: bold;
+      }
+      .inactivo {
+        color: #ff4444;
+      }
+      button {
+        background: #e94560;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        cursor: pointer;
+        border-radius: 4px;
+        margin: 5px;
+      }
+      button:hover {
+        background: #c73652;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🎰 Sistema de Turnos - Casino Atlantic Miraflores</h1>
+
+    <h2>👥 Operadores Activos</h2>
+    <table id="tablaOperadores">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombres</th>
+          <th>Apellidos</th>
+          <th>DNI</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="bodyOperadores"></tbody>
+    </table>
+
+    <h2>🕐 Turnos del Casino</h2>
+    <table id="tablaTurnos">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Turno</th>
+          <th>Hora Inicio</th>
+          <th>Hora Fin</th>
+        </tr>
+      </thead>
+      <tbody id="bodyTurnos"></tbody>
+    </table>
+
+    <h2>📋 Registro de Asistencia</h2>
+    <button onclick="cargarAsistencia()">🔄 Actualizar Asistencia</button>
+    <table id="tablaAsistencia">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Operador</th>
+          <th>Turno</th>
+          <th>Estado</th>
+          <th>Horas Extra</th>
+        </tr>
+      </thead>
+      <tbody id="bodyAsistencia"></tbody>
+    </table>
+
+    <script>
+      const API = "https://casino-turnos-api-production.up.railway.app/";
+
+      async function cargarOperadores() {
+        const res = await fetch(`${API}/operadores`);
+        const data = await res.json();
+        const tbody = document.getElementById("bodyOperadores");
+        tbody.innerHTML = "";
+        data.forEach((op) => {
+          tbody.innerHTML += `
+                    <tr>
+                        <td>${op.id_operador}</td>
+                        <td>${op.nombres}</td>
+                        <td>${op.apellidos}</td>
+                        <td>${op.dni}</td>
+                        <td class="${op.estado}">${op.estado.toUpperCase()}</td>
+                    </tr>`;
+        });
+      }
+
+      async function cargarTurnos() {
+        const res = await fetch(`${API}/turnos`);
+        const data = await res.json();
+        const tbody = document.getElementById("bodyTurnos");
+        tbody.innerHTML = "";
+        data.forEach((t) => {
+          tbody.innerHTML += `
+                    <tr>
+                        <td>${t.id_turno}</td>
+                        <td>${t.nombre_turno}</td>
+                        <td>${t.hora_inicio}</td>
+                        <td>${t.hora_fin}</td>
+                    </tr>`;
+        });
+      }
+
+      async function cargarAsistencia() {
+        const res = await fetch(`${API}/asistencia`);
+        const data = await res.json();
+        const tbody = document.getElementById("bodyAsistencia");
+        tbody.innerHTML = "";
+        data.forEach((a) => {
+          tbody.innerHTML += `
+                    <tr>
+                        <td>${a.fecha}</td>
+                        <td>${a.nombres} ${a.apellidos}</td>
+                        <td>${a.nombre_turno}</td>
+                        <td>${a.estado.toUpperCase()}</td>
+                        <td>${a.horas_extra}h</td>
+                    </tr>`;
+        });
+      }
+
+      // Cargar todo al abrir la página
+      cargarOperadores();
+      cargarTurnos();
+      cargarAsistencia();
+    </script>
+  </body>
+</html>
