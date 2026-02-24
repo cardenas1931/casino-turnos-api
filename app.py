@@ -2,25 +2,29 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import mysql.connector
 import os
+import sys
 
 app = Flask(__name__)
 CORS(app)
 
-# Conexión a la base de datos
 def get_connection():
-    return mysql.connector.connect(
-        host=os.environ.get("DB_HOST", "localhost"),
-        user=os.environ.get("DB_USER", "root"),
-        password=os.environ.get("DB_PASSWORD", "Admin1234"),
-        database=os.environ.get("DB_NAME", "casino_turnos")
-    )
+    try:
+        conn = mysql.connector.connect(
+            host=os.environ.get("DB_HOST", "localhost"),
+            user=os.environ.get("DB_USER", "root"),
+            password=os.environ.get("DB_PASSWORD", "Admin1234"),
+            database=os.environ.get("DB_NAME", "casino_turnos"),
+            port=int(os.environ.get("DB_PORT", 3306))
+        )
+        return conn
+    except Exception as e:
+        print(f"ERROR DE CONEXION DB: {e}", flush=True)
+        raise
 
-# Ruta principal - prueba que el servidor funciona
 @app.route('/')
 def inicio():
     return jsonify({"mensaje": "Sistema de Turnos Casino - API funcionando"})
 
-# Endpoint para ver todos los operadores activos
 @app.route('/operadores')
 def get_operadores():
     conn = get_connection()
@@ -37,11 +41,11 @@ def get_turnos():
     cursor.execute("SELECT * FROM turnos")
     turnos = cursor.fetchall()
     conn.close()
-    # Convertir timedelta a string legible
     for turno in turnos:
         turno['hora_inicio'] = str(turno['hora_inicio'])
         turno['hora_fin'] = str(turno['hora_fin'])
     return jsonify(turnos)
+
 @app.route('/asistencia', methods=['GET'])
 def get_asistencia():
     conn = get_connection()
@@ -92,7 +96,6 @@ def registrar_dm():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
     
-    # Registrar la ausencia por DM
     cursor.execute("""
         INSERT INTO asistencia 
         (id_operador, id_turno, fecha, estado)
@@ -100,7 +103,6 @@ def registrar_dm():
     """, (datos['id_operador'], datos['id_turno'], datos['fecha']))
     conn.commit()
 
-    # Contar operadores por turno en esa fecha
     cursor.execute("""
         SELECT 
             t.id_turno,
@@ -115,15 +117,12 @@ def registrar_dm():
     """, (datos['fecha'], datos['id_turno']))
     
     turnos_disponibles = cursor.fetchall()
-    
-    # Aplicar reglas de minimos
     minimos = {2: 1, 3: 2, 4: 2, 1: 2, 5: 1}
     candidatos = []
     
     for turno in turnos_disponibles:
         minimo = minimos.get(turno['id_turno'], 1)
         if turno['total_operadores'] > minimo:
-            # Buscar un operador de ese turno
             cursor.execute("""
                 SELECT o.id_operador, o.nombres, o.apellidos, %s as turno_origen
                 FROM asistencia a
