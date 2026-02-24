@@ -65,8 +65,6 @@ def get_asistencia():
         r['fecha'] = str(r['fecha'])
     return jsonify(registros)
 
-from flask import Flask, jsonify, request  # Agrega 'request' al import del inicio
-
 @app.route('/asistencia', methods=['POST'])
 def registrar_asistencia():
     datos = request.get_json()
