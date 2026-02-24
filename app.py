@@ -85,5 +85,70 @@ def registrar_asistencia():
     conn.close()
     return jsonify({"mensaje": "Asistencia registrada correctamente"}), 201
 
+@app.route('/descanso-medico', methods=['POST'])
+def registrar_dm():
+    datos = request.get_json()
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    
+    # Registrar la ausencia por DM
+    cursor.execute("""
+        INSERT INTO asistencia 
+        (id_operador, id_turno, fecha, estado)
+        VALUES (%s, %s, %s, 'falto')
+    """, (datos['id_operador'], datos['id_turno'], datos['fecha']))
+    conn.commit()
+
+    # Contar operadores por turno en esa fecha
+    cursor.execute("""
+        SELECT 
+            t.id_turno,
+            t.nombre_turno,
+            COUNT(a.id_operador) as total_operadores
+        FROM asistencia a
+        JOIN turnos t ON a.id_turno = t.id_turno
+        WHERE a.fecha = %s 
+        AND a.estado = 'asistio'
+        AND a.id_turno != %s
+        GROUP BY t.id_turno
+    """, (datos['fecha'], datos['id_turno']))
+    
+    turnos_disponibles = cursor.fetchall()
+    
+    # Aplicar reglas de minimos
+    minimos = {2: 1, 3: 2, 4: 2, 1: 2, 5: 1}
+    candidatos = []
+    
+    for turno in turnos_disponibles:
+        minimo = minimos.get(turno['id_turno'], 1)
+        if turno['total_operadores'] > minimo:
+            # Buscar un operador de ese turno
+            cursor.execute("""
+                SELECT o.id_operador, o.nombres, o.apellidos, %s as turno_origen
+                FROM asistencia a
+                JOIN operadores o ON a.id_operador = o.id_operador
+                WHERE a.fecha = %s 
+                AND a.id_turno = %s 
+                AND a.estado = 'asistio'
+                AND a.id_operador != %s
+                LIMIT 1
+            """, (turno['nombre_turno'], datos['fecha'], turno['id_turno'], datos['id_operador']))
+            operador = cursor.fetchone()
+            if operador:
+                candidatos.append(operador)
+    
+    conn.close()
+    
+    if candidatos:
+        return jsonify({
+            "mensaje": "Descanso medico registrado",
+            "sugerencias_cobertura": candidatos
+        }), 201
+    else:
+        return jsonify({
+            "mensaje": "Descanso medico registrado. Manejar con personal del turno afectado.",
+            "sugerencias_cobertura": []
+        }), 201
+
 if __name__ == '__main__':
     app.run(debug=True)
