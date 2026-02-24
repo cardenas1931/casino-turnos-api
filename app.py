@@ -1,15 +1,18 @@
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 import mysql.connector
+import os
 
 app = Flask(__name__)
+CORS(app)
 
 # Conexión a la base de datos
 def get_connection():
     return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="Admin1234",  # Cambia esto por tu contraseña real
-        database="casino_turnos"
+        host=os.environ.get("DB_HOST", "localhost"),
+        user=os.environ.get("DB_USER", "root"),
+        password=os.environ.get("DB_PASSWORD", "Admin1234"),
+        database=os.environ.get("DB_NAME", "casino_turnos")
     )
 
 # Ruta principal - prueba que el servidor funciona
@@ -151,4 +154,5 @@ def registrar_dm():
         }), 201
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
